@@ -13,12 +13,7 @@ use Illuminate\Session\Store as SessionStore;
 
 class GeoIP {
 
-	/**
-	 * The session store.
-	 *
-	 * @var \Illuminate\Session\Store
-	 */
-	protected $session;
+        protected $local_cache = null;
 
 	/**
 	 * Illuminate config repository instance.
@@ -80,12 +75,10 @@ class GeoIP {
 	 * Create a new GeoIP instance.
 	 *
 	 * @param  \Illuminate\Config\Repository  $config
-	 * @param  \Illuminate\Session\Store      $session
 	 */
-	public function __construct(Repository $config, SessionStore $session)
+	public function __construct(Repository $config)
 	{
 		$this->config  = $config;
-		$this->session = $session;
 
 		// Set custom default location
 		$this->default_location = array_merge(
@@ -97,15 +90,6 @@ class GeoIP {
 		$this->remote_ip = $this->default_location['ip'] = $this->getClientIP();
 	}
 
-	/**
-	 * Save location data in the session.
-	 *
-	 * @return void
-	 */
-	function saveLocation()
-	{
-		$this->session->set('geoip-location', $this->location);
-	}
 
 	/**
 	 * Get location from IP.
@@ -120,7 +104,7 @@ class GeoIP {
 
 		// Save user's location
 		if ($ip === null) {
-			$this->saveLocation();
+                    $this->local_cache = $this->location;
 		}
 
 		return $this->location;
@@ -136,8 +120,8 @@ class GeoIP {
 	private function find($ip = null)
 	{
 		// Check Session
-		if ($ip === null && $position = $this->session->get('geoip-location')) {
-			return $position;
+		if ($ip === null && !empty($this->local_cache)) {
+			return $this->local_cache;
 		}
 
 		// If IP not set, user remote IP
